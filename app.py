@@ -89,11 +89,27 @@ if st.button("Analyze sentiment", type="primary"):
         proba = model.predict_proba([review])[0]
         order = list(clf.classes_)
         pred = order[int(np.argmax(proba))]
+        confidence = float(proba.max())
+
+        # A 39% / 31% / 30% split is the model saying "I don't know". Showing
+        # that as a confident label - in the same red as a 98% call - is
+        # misleading, and it is the single most common way a demo of this kind
+        # misleads its audience. Below CONFIDENT the label is withheld.
+        CONFIDENT = 0.50
 
         st.markdown("### Prediction")
-        st.markdown(
-            f"<span style='font-size:2rem;font-weight:600;color:{COLOURS[pred]}'>"
-            f"{pred}</span>", unsafe_allow_html=True)
+        if confidence < CONFIDENT:
+            st.markdown(
+                "<span style='font-size:2rem;font-weight:600;color:#898781'>"
+                "uncertain</span>", unsafe_allow_html=True)
+            st.caption(
+                f"Closest label is **{pred}**, but only at {confidence:.0%}. "
+                f"The three classes are too close to call this one."
+            )
+        else:
+            st.markdown(
+                f"<span style='font-size:2rem;font-weight:600;color:{COLOURS[pred]}'>"
+                f"{pred}</span>", unsafe_allow_html=True)
 
         cols = st.columns(3)
         for col, lab in zip(cols, LABELS):
@@ -115,10 +131,15 @@ if st.button("Analyze sentiment", type="primary"):
             st.dataframe(contrib.style.format({"contribution": "{:+.3f}"}),
                          hide_index=True, use_container_width=True)
 
-        if proba.max() < 0.5:
+        if confidence < CONFIDENT:
             st.warning(
-                "Low confidence. Short, sarcastic or mixed reviews sit near the "
-                "boundary — worth showing rather than hiding."
+                "**Why this is uncertain.** The model only knows Amazon tablets, "
+                "e-readers and Echo devices. Phrases like *\"worked as expected\"* "
+                "lean negative in this data, because reviewers write them as "
+                "*\"worked for two weeks\"* or *\"what I expected for the price\"*. "
+                "Words from outside the domain — smartphone, laptop, headphones — "
+                "have coefficients fitted to a handful of reviews and should not "
+                "be trusted. The chart above shows exactly which words drove it."
             )
 
 with st.expander("About this model"):
