@@ -165,6 +165,19 @@ def load_catstring_clusters():
     return cent, names, tbl
 
 
+@st.cache_data
+def load_members(using_cat):
+    """Embeddings of the real items the clustering was fitted on, in the same
+    row order as products_categorised.csv / catstring_table.csv.
+
+    Used only to decide whether an input resembles anything in the dataset at
+    all - see the floor test in the Product categories tab. Unit vectors, so a
+    dot product is cosine similarity. 39x384 and 38x384 floats, ~60 KB each.
+    """
+    f = "catstring_embeddings.npy" if using_cat else "product_embeddings.npy"
+    return np.load(HERE / f)
+
+
 def embed_one(text):
     torch, tk, md = load_embedder()
     enc = tk([text], padding=True, truncation=True, max_length=64,
@@ -374,7 +387,10 @@ with TAB[1]:
         "Task 2. The 39 products were grouped into six meta-categories by "
         "embedding each **product name** with a sentence model and running "
         "KMeans over those vectors. Type any product name below and it is "
-        "placed in the nearest category."
+        "placed in the nearest category - **or told that none of the six "
+        "fits**, if nothing in the dataset resembles it. Try *Samsung Galaxy "
+        "S9*: there is no phone cluster to put it in, and saying so is the "
+        "correct answer."
     )
 
     BY_NAME = "By product name - 39 products, ARI 0.9999, covers 80.5% of reviews"
@@ -414,7 +430,8 @@ with TAB[1]:
         "An e-reader": "Kindle Paperwhite e-reader with backlight",
         "A charger": "Official 9W USB power adapter",
         "A case": "Leather protective cover for Kindle",
-        "A speaker": "Echo Dot smart speaker with Alexa",
+        "A speaker": "Echo Dot",
+        "A phone - not in the dataset": "Samsung Galaxy S9",
         "Something it has never seen": "Bluetooth running headphones",
     }
     # Real strings from the dataset, one per cluster. Invented breadcrumbs sit
@@ -444,39 +461,122 @@ with TAB[1]:
             d = np.linalg.norm(cent - v, axis=1)
             order = np.argsort(d)
             best = int(order[0])
-            # cosine similarity, since both are unit vectors
+            # NOT cosine: the stored centroids are means of unit vectors and
+            # were never renormalised, so their norms run 0.79-0.96. cent @ v
+            # is therefore cosine scaled by the centroid's norm. That is fine
+            # for ranking the six against each other, and it is why the floor
+            # below is calibrated on these same numbers rather than on a 0-1
+            # cosine scale.
             sims = cent @ v
 
-            st.markdown("### Category")
-            st.markdown(
-                f"<span style='font-size:2.2rem;font-weight:700;color:{FLUX_DK}'>"
-                f"{cnames[best]}</span>", unsafe_allow_html=True)
-            st.caption(
-                f"Closest of six, similarity {sims[best]:.3f}. "
-                f"Runner-up: **{cnames[int(order[1])]}** at {sims[int(order[1])]:.3f}."
-            )
+            # The nearest of six centroids is always *some* category, even for
+            # a product this model has never seen - "Nike running shoes" used
+            # to come back as Chargers & cables. So before naming a category,
+            # check that the input resembles something the clustering was
+            # actually fitted on. Two tests, and an input must pass both:
+            #
+            #   1. distance to the nearest centroid  (is it near a cluster?)
+            #   2. distance to the nearest REAL item (is it near real data?)
+            #
+            # Neither alone is enough, and which one is weaker depends on the
+            # model. Measured on MiniLM-L12 with 8 in-range phrasings and 11
+            # off-range ones (phones, laptops, shoes, headphones, coffee pods,
+            # a banana):
+            #
+            #   product names    test 1  in-range 0.372-0.656, off-range <=0.349
+            #                    test 2  in-range 0.572-0.817, off-range <=0.590
+            #   category strings test 1  in-range 0.502-0.807, off-range <=0.620
+            #                    test 2  in-range 0.732-1.000, off-range <=0.668
+            #
+            # Test 1 separates product names but overlaps on category strings;
+            # test 2 is the other way round. Together they separate both. The
+            # product-name margin is thin - 0.372 against 0.349 - so this is a
+            # calibrated guard, not a guarantee.
+            #
+            # Test 2's single false accept is instructive: "Logitech wireless
+            # keyboard" scores 0.590 because the dataset contains "Kindle
+            # Keyboard". Test 1 rejects it. The app prints whichever real item
+            # was matched, so a borderline call is visible rather than hidden.
+            CENT_FLOOR, NN_FLOOR = (0.45, 0.70) if USING_CAT else (0.36, 0.50)
+            memb = load_members(USING_CAT)
+            nn = memb @ v
+            j = int(np.argmax(nn))
+            if USING_CAT:
+                nn_label = tbl["category_string"].iloc[j]
+                nn_cat = tbl["meta_category"].iloc[j]
+                THING = "category string"
+            else:
+                nn_label = prods["product_name"].iloc[j]
+                nn_cat = prods["category"].iloc[j]
+                THING = "product"
+            known = sims[best] >= CENT_FLOOR and nn[j] >= NN_FLOOR
 
-            gap = sims[best] - sims[int(order[1])]
-            if gap < 0.05:
-                st.warning(
-                    f"The top two are only {gap:.3f} apart, so this one sits "
-                    f"near a boundary. Product names outside the Amazon device "
-                    f"range have nothing close to match against."
+            st.markdown("### Category")
+            if known:
+                st.markdown(
+                    f"<span style='font-size:2.2rem;font-weight:700;color:{FLUX_DK}'>"
+                    f"{cnames[best]}</span>", unsafe_allow_html=True)
+                st.caption(
+                    f"Nearest of the six centroids, score {sims[best]:.3f}. "
+                    f"Runner-up: **{cnames[int(order[1])]}** at {sims[int(order[1])]:.3f}."
+                )
+                st.success(
+                    f"Closest real {THING} in the dataset: **{str(nn_label)[:70]}** "
+                    f"at {nn[j]:.3f} cosine, and it sits in *{nn_cat}*."
+                )
+                if nn_cat != cnames[best]:
+                    st.warning(
+                        f"The nearest centroid says **{cnames[best]}** but the "
+                        f"nearest real {THING} sits in **{nn_cat}**. The two "
+                        f"disagree, so treat this one as a boundary case."
+                    )
+            else:
+                st.markdown(
+                    "<span style='font-size:2.2rem;font-weight:700;color:#8a8a8a'>"
+                    "No category matches</span>", unsafe_allow_html=True)
+                failed = []
+                if sims[best] < CENT_FLOOR:
+                    failed.append(
+                        f"it is {sims[best]:.3f} from the nearest centroid "
+                        f"(*{cnames[best]}*), under the {CENT_FLOOR:.2f} floor")
+                if nn[j] < NN_FLOOR:
+                    failed.append(
+                        f"the closest real {THING} is **{str(nn_label)[:60]}** "
+                        f"at only {nn[j]:.3f}, under the {NN_FLOOR:.2f} floor")
+                st.error(
+                    "Nothing in the dataset is close enough to this: "
+                    + ", and ".join(failed) + ". The clustering was fitted on "
+                    + ("38 Amazon category strings" if USING_CAT
+                       else "39 Amazon devices")
+                    + ", so this sits outside it. Naming one of the six would "
+                      "be inventing an answer rather than reporting one."
+                )
+                st.caption(
+                    f"Before this check the app would have answered "
+                    f"*{cnames[best]}* here."
                 )
 
-            st.markdown("### What is already in that category")
-            if USING_CAT:
-                members = (tbl[tbl["meta_category"] == cnames[best]]
-                           .sort_values("reviews", ascending=False))
-                st.dataframe(members[["category_string", "reviews"]],
-                             hide_index=True, use_container_width=True)
-            else:
-                members = (prods[prods["category"] == cnames[best]]
-                           .sort_values("reviews", ascending=False))
-                st.dataframe(
-                    members[["product_name", "reviews", "mean_rating"]]
-                    .style.format({"mean_rating": "{:.2f}"}),
-                    hide_index=True, use_container_width=True)
+            if known:
+                gap = sims[best] - sims[int(order[1])]
+                if gap < 0.05:
+                    st.warning(
+                        f"The top two centroids are only {gap:.3f} apart, so "
+                        f"this one sits near a boundary between categories."
+                    )
+
+                st.markdown("### What is already in that category")
+                if USING_CAT:
+                    members = (tbl[tbl["meta_category"] == cnames[best]]
+                               .sort_values("reviews", ascending=False))
+                    st.dataframe(members[["category_string", "reviews"]],
+                                 hide_index=True, use_container_width=True)
+                else:
+                    members = (prods[prods["category"] == cnames[best]]
+                               .sort_values("reviews", ascending=False))
+                    st.dataframe(
+                        members[["product_name", "reviews", "mean_rating"]]
+                        .style.format({"mean_rating": "{:.2f}"}),
+                        hide_index=True, use_container_width=True)
 
             st.markdown("### Similarity to every category")
             st.dataframe(
