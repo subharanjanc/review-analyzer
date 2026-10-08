@@ -135,7 +135,7 @@ if st.button("Analyze sentiment", type="primary"):
         # that as a confident label - in the same red as a 98% call - is
         # misleading, and it is the single most common way a demo of this kind
         # misleads its audience. Below CONFIDENT the label is withheld.
-        CONFIDENT = 0.50
+        CONFIDENT = 0.60
 
         st.markdown("### Prediction")
         if confidence < CONFIDENT:
@@ -164,12 +164,29 @@ if st.button("Analyze sentiment", type="primary"):
         else:
             st.caption(
                 f"Each word's TF-IDF weight times its coefficient for "
-                f"**{pred}**. Positive values pushed towards this label, "
-                f"negative values pushed away."
+                f"**{pred}**. This is the arithmetic the model performed, not "
+                f"an approximation of it."
             )
-            st.bar_chart(contrib.set_index("word")["contribution"])
-            st.dataframe(contrib.style.format({"contribution": "{:+.3f}"}),
+
+            # Spell the direction out in words. A bar pointing down under a red
+            # "negative" heading reads as "this word is negative" when it means
+            # the exact opposite, and that has already misled a reader once.
+            shown = contrib.copy()
+            shown["effect"] = [
+                ("pushes TOWARD " + pred) if v > 0 else ("pushes AWAY from " + pred)
+                for v in shown["contribution"]
+            ]
+            shown = shown[["word", "effect", "contribution"]]
+            st.dataframe(shown.style.format({"contribution": "{:+.3f}"}),
                          hide_index=True, use_container_width=True)
+
+            defenders = contrib[contrib["contribution"] < 0]["word"].tolist()
+            if defenders and pred == "negative":
+                st.caption(
+                    "Arguing against this verdict: **"
+                    + "**, **".join(defenders[:4])
+                    + "**. They were outweighed, not ignored."
+                )
 
         if confidence < CONFIDENT:
             st.warning(
