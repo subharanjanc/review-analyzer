@@ -27,14 +27,14 @@ HERE = Path(__file__).parent
 # makes the central trade-off of this project something you can switch on and
 # off rather than something you have to take on trust.
 MODELS = {
-    "Complaint-finding (class_weight='balanced')": HERE / "sentiment_model.joblib",
-    "Everyday accuracy (unweighted)": HERE / "sentiment_model_unweighted.joblib",
+    "Complaint-finding - class_weight='balanced' - catches 58% of complaints": HERE / "sentiment_model.joblib",
+    "Standard training - no class weighting - higher accuracy, misses 78% of complaints": HERE / "sentiment_model_unweighted.joblib",
 }
 
 SCORES = {
-    "Complaint-finding (class_weight='balanced')":
+    "Complaint-finding - class_weight='balanced' - catches 58% of complaints":
         dict(accuracy=0.8881, balanced=0.6636, macro_f1=0.5687, neg_recall=0.5802),
-    "Everyday accuracy (unweighted)":
+    "Standard training - no class weighting - higher accuracy, misses 78% of complaints":
         dict(accuracy=0.9408, balanced=0.4464, macro_f1=0.5026, neg_recall=0.2222),
 }
 
@@ -98,11 +98,13 @@ c2.metric("Balanced acc.", f"{_s['balanced']:.4f}")
 c3.metric("Macro F1", f"{_s['macro_f1']:.4f}")
 c4.metric("Negative recall", f"{_s['neg_recall']:.4f}")
 
-if choice_model.startswith("Everyday"):
+if choice_model.startswith("Standard"):
     st.warning(
-        "Higher accuracy, but it finds only **22%** of complaints against 58%. "
-        "Fine for judging a single review, wrong for a system whose job is "
-        "surfacing unhappy customers."
+        "**0.9408 accuracy, and it finds 22% of complaints.** The balanced "
+        "model scores 0.8881 and finds 58%. Accuracy is higher here only "
+        "because 93.3% of reviews are positive, so leaning positive is right "
+        "most of the time. Fine for judging one review; wrong for a system "
+        "whose job is surfacing unhappy customers."
     )
 
 st.divider()
