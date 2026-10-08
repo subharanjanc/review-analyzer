@@ -31,11 +31,22 @@ MODELS = {
     "Standard training - no class weighting - higher accuracy, misses 78% of complaints": HERE / "sentiment_model_unweighted.joblib",
 }
 
+# A third option: the off-the-shelf model Rayhan's dashboard uses. It beats
+# ours on every metric and handles sarcasm, which ours misses. It is kept as an
+# option rather than a replacement because (a) it is somebody else's finished
+# model, not transfer learning we performed, (b) its training data is
+# unpublished so we cannot rule out that it has seen these reviews, and (c) it
+# cannot show which words drove a decision.
+HF_MODEL = "SebasLopez-ai/distilbert-amazon-reviews-sentiment"
+HF_LABEL = "DistilBERT - fine-tuned by another author - best scores, cannot explain itself"
+
 SCORES = {
     "Complaint-finding - class_weight='balanced' - catches 58% of complaints":
         dict(accuracy=0.8881, balanced=0.6636, macro_f1=0.5687, neg_recall=0.5802),
     "Standard training - no class weighting - higher accuracy, misses 78% of complaints":
         dict(accuracy=0.9408, balanced=0.4464, macro_f1=0.5026, neg_recall=0.2222),
+    HF_LABEL:
+        dict(accuracy=0.9184, balanced=0.7711, macro_f1=0.6863, neg_recall=0.8115),
 }
 
 st.set_page_config(page_title="Review Sentiment Analyzer",
@@ -79,17 +90,34 @@ st.write(
     "neutral or positive, and shows which words drove the decision."
 )
 
+@st.cache_resource
+def load_hf():
+    """Loaded only when selected - it is a ~260 MB download on first use."""
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    torch.set_num_threads(2)
+    tk = AutoTokenizer.from_pretrained(HF_MODEL)
+    md = AutoModelForSequenceClassification.from_pretrained(HF_MODEL).eval()
+    return torch, tk, md
+
+
 choice_model = st.radio(
     "Model",
-    list(MODELS),
+    list(MODELS) + [HF_LABEL],
     horizontal=False,
     help="Same features and same training data. The only difference is whether "
          "the rare classes are up-weighted during fitting.",
 )
 
-model = load_model(str(MODELS[choice_model]))
-vec = model.named_steps["tfidf"]
-clf = model.named_steps["clf"]
+USING_HF = choice_model == HF_LABEL
+if USING_HF:
+    with st.spinner("Loading DistilBERT (~260 MB on first use)..."):
+        _torch, _tk, _md = load_hf()
+    model = vec = clf = None
+else:
+    model = load_model(str(MODELS[choice_model]))
+    vec = model.named_steps["tfidf"]
+    clf = model.named_steps["clf"]
 
 _s = SCORES[choice_model]
 c1, c2, c3, c4 = st.columns(4)
@@ -98,7 +126,17 @@ c2.metric("Balanced acc.", f"{_s['balanced']:.4f}")
 c3.metric("Macro F1", f"{_s['macro_f1']:.4f}")
 c4.metric("Negative recall", f"{_s['neg_recall']:.4f}")
 
-if choice_model.startswith("Standard"):
+if USING_HF:
+    st.info(
+        "**Best scores of the three, and it reads sarcasm** - "
+        "*\"Great, it broke on day three\"* comes out negative here and "
+        "positive on ours. Two caveats worth stating: this is somebody else's "
+        "finished model rather than transfer learning we performed, and its "
+        "training data is unpublished, so we cannot rule out that it has "
+        "already seen these reviews. It also cannot show which words drove a "
+        "decision - the table below is unavailable for it."
+    )
+elif choice_model.startswith("Standard"):
     st.warning(
         "**0.9408 accuracy, and it finds 22% of complaints.** The balanced "
         "model scores 0.8881 and finds 58%. Accuracy is higher here only "
@@ -126,8 +164,15 @@ if st.button("Analyze sentiment", type="primary"):
     if not review.strip():
         st.warning("Enter a review first.")
     else:
-        proba = model.predict_proba([review])[0]
-        order = list(clf.classes_)
+        if USING_HF:
+            enc = _tk(review, return_tensors="pt", truncation=True, max_length=256)
+            with _torch.no_grad():
+                logits = _md(**enc).logits[0]
+            proba = _torch.softmax(logits, -1).numpy()
+            order = [_md.config.id2label[i].lower() for i in range(len(proba))]
+        else:
+            proba = model.predict_proba([review])[0]
+            order = list(clf.classes_)
         pred = order[int(np.argmax(proba))]
         confidence = float(proba.max())
 
@@ -158,6 +203,13 @@ if st.button("Analyze sentiment", type="primary"):
         st.progress(float(proba[order.index(pred)]))
 
         st.markdown("### Why")
+        if USING_HF:
+            st.info(
+                "A transformer cannot show this. Its decision is spread across "
+                "66 million weights with no named features to attribute it to. "
+                "Switch to either TF-IDF model to see the per-word arithmetic."
+            )
+            st.stop()
         contrib = word_contributions(review, pred)
         if contrib.empty:
             st.info("No recognised words — every term was unseen or a stopword.")
