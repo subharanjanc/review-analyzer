@@ -153,6 +153,18 @@ def load_clusters():
     return cent, names, prods
 
 
+@st.cache_data
+def load_catstring_clusters():
+    """The second model: clusters Amazon's own `categories` strings instead of
+    product names. Neither ratings nor review counts are used as features."""
+    import json
+    cent = np.load(HERE / "catstring_centroids.npy")
+    with open(HERE / "catstring_names.json", encoding="utf-8") as f:
+        names = {int(k): v for k, v in json.load(f).items()}
+    tbl = pd.read_csv(HERE / "catstring_table.csv")
+    return cent, names, tbl
+
+
 def embed_one(text):
     torch, tk, md = load_embedder()
     enc = tk([text], padding=True, truncation=True, max_length=64,
@@ -365,7 +377,36 @@ with TAB[1]:
         "placed in the nearest category."
     )
 
-    cent, cnames, prods = load_clusters()
+    BY_NAME = "By product name - 39 products, ARI 0.9999, covers 80.5% of reviews"
+    BY_CAT = "By Amazon category string - 38 strings, ARI 0.8107, covers 100%"
+    which = st.radio("Clustering model", [BY_NAME, BY_CAT], key="cluster_model")
+    USING_CAT = which == BY_CAT
+
+    if USING_CAT:
+        cent, cnames, tbl = load_catstring_clusters()
+        st.info(
+            "**Clusters Amazon's own `categories` field rather than the product "
+            "name.** Neither ratings nor review counts are used. It scores lower "
+            "against the hand-labelled answer (0.8107 vs 0.9999) but reaches "
+            "**every** review — including the **6,759 with no product name at "
+            "all**, which the other model cannot touch. Those turn out to be "
+            "TV and home-theatre products: their category string says so even "
+            "though their name is empty. "
+            "The 0.9999 is also flattering: the gold labels are derived "
+            "from product names, so a model clustering product names is "
+            "largely grading its own homework. This one never sees a "
+            "product name and still recovers the same taxonomy."
+        )
+        st.caption(
+            "A caution on this model: these strings are Amazon **merchandising "
+            "paths**, not a product taxonomy. One of them literally begins "
+            "*Walmart for Business*, another *Back To College*. The clusters "
+            "therefore group by where a product is sold as much as by what it "
+            "is, and an invented breadcrumb will often land in the wrong one. "
+            "The examples below are real strings taken from the data."
+        )
+    else:
+        cent, cnames, prods = load_clusters()
 
     PRODUCT_EXAMPLES = {
         "— choose an example —": "",
@@ -376,10 +417,23 @@ with TAB[1]:
         "A speaker": "Echo Dot smart speaker with Alexa",
         "Something it has never seen": "Bluetooth running headphones",
     }
-    pick = st.selectbox("Try an example, or write your own",
-                        list(PRODUCT_EXAMPLES), key="prod_example")
-    product = st.text_input("Product name", value=PRODUCT_EXAMPLES[pick],
-                            placeholder="Fire HD 8 Tablet, 16 GB, Wi-Fi")
+    # Real strings from the dataset, one per cluster. Invented breadcrumbs sit
+    # outside the training distribution and misclassify - these strings are
+    # Amazon merchandising paths, not a product taxonomy, so a plausible-looking
+    # made-up one ("Kindle Store, Kindle E-readers") lands in the wrong cluster.
+    import json as _json
+    with open(HERE / "catstring_examples.json", encoding="utf-8") as _f:
+        _real = _json.load(_f)
+    CAT_EXAMPLES = {"— choose a real category string —": ""}
+    CAT_EXAMPLES.update({k: v for k, v in _real.items()})
+    ex = CAT_EXAMPLES if USING_CAT else PRODUCT_EXAMPLES
+    pick = st.selectbox("Try an example, or write your own", list(ex),
+                        key="cat_example" if USING_CAT else "prod_example")
+    product = st.text_input(
+        "Amazon category string" if USING_CAT else "Product name",
+        value=ex[pick],
+        placeholder=("Fire Tablets,Tablets,Computers & Tablets" if USING_CAT
+                     else "Fire HD 8 Tablet, 16 GB, Wi-Fi"))
 
     if st.button("Categorise product"):
         if not product.strip():
@@ -411,12 +465,18 @@ with TAB[1]:
                 )
 
             st.markdown("### What is already in that category")
-            members = (prods[prods["category"] == cnames[best]]
-                       .sort_values("reviews", ascending=False))
-            st.dataframe(
-                members[["product_name", "reviews", "mean_rating"]]
-                .style.format({"mean_rating": "{:.2f}"}),
-                hide_index=True, use_container_width=True)
+            if USING_CAT:
+                members = (tbl[tbl["meta_category"] == cnames[best]]
+                           .sort_values("reviews", ascending=False))
+                st.dataframe(members[["category_string", "reviews"]],
+                             hide_index=True, use_container_width=True)
+            else:
+                members = (prods[prods["category"] == cnames[best]]
+                           .sort_values("reviews", ascending=False))
+                st.dataframe(
+                    members[["product_name", "reviews", "mean_rating"]]
+                    .style.format({"mean_rating": "{:.2f}"}),
+                    hide_index=True, use_container_width=True)
 
             st.markdown("### Similarity to every category")
             st.dataframe(
@@ -427,14 +487,26 @@ with TAB[1]:
 
     st.divider()
     st.markdown("#### The six categories")
-    summary = (prods.groupby("category")
-               .agg(products=("product_name", "size"), reviews=("reviews", "sum"),
-                    mean_rating=("mean_rating", "mean"))
-               .sort_values("reviews", ascending=False).reset_index())
-    st.dataframe(summary.style.format({"mean_rating": "{:.2f}"}),
-                 hide_index=True, use_container_width=True)
-
-    st.caption(
+    if USING_CAT:
+        summary = (tbl.groupby("meta_category")
+                   .agg(category_strings=("category_string", "size"),
+                        reviews=("reviews", "sum"))
+                   .sort_values("reviews", ascending=False).reset_index())
+        st.dataframe(summary, hide_index=True, use_container_width=True)
+        st.caption(
+            "All **34,626** reviews are covered, against 27,866 for the "
+            "product-name model. The extra 6,760 are reviews whose product "
+            "name is empty — they land in *TV & home theatre*, which is what "
+            "their category string describes."
+        )
+    else:
+        summary = (prods.groupby("category")
+                   .agg(products=("product_name", "size"), reviews=("reviews", "sum"),
+                        mean_rating=("mean_rating", "mean"))
+                   .sort_values("reviews", ascending=False).reset_index())
+        st.dataframe(summary.style.format({"mean_rating": "{:.2f}"}),
+                     hide_index=True, use_container_width=True)
+        st.caption(
         "Agreement with a hand-labelled answer, measured by adjusted Rand "
         "index: **0.8659**. TF-IDF over the same names scored 0.5087, and the "
         "first attempt — product name plus Amazon's own category string — "
