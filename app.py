@@ -86,13 +86,15 @@ st.title("Review Sentiment Analyzer")
 st.caption("Project 1 · Task 1 · Subha & Rayhan — Ironhack AI Engineering, AI FT SEPT 26")
 
 st.write(
-    "Paste an Amazon product review. The model classifies it as negative, "
-    "neutral or positive, and shows which words drove the decision."
+    "Paste an Amazon product review and get a sentiment classification. "
+    "Three models are available: the DistilBERT our team deployed, and the "
+    "two TF-IDF models we built from scratch - which score lower but can "
+    "show exactly which words drove the decision."
 )
 
 @st.cache_resource
 def load_hf():
-    """Loaded only when selected - it is a ~260 MB download on first use."""
+    """~260 MB on first use, then cached for the life of the container."""
     import torch
     from transformers import AutoTokenizer, AutoModelForSequenceClassification
     torch.set_num_threads(2)
@@ -103,7 +105,7 @@ def load_hf():
 
 choice_model = st.radio(
     "Model",
-    list(MODELS) + [HF_LABEL],
+    [HF_LABEL] + list(MODELS),
     horizontal=False,
     help="Same features and same training data. The only difference is whether "
          "the rare classes are up-weighted during fitting.",
