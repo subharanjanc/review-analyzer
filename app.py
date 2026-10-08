@@ -21,7 +21,22 @@ import streamlit as st
 # Streamlit Cloud runs with the REPO ROOT as the working directory, not the
 # folder holding this file - so a bare "sentiment_model.joblib" would not be
 # found once deployed. Resolve it against this file instead.
-MODEL_PATH = Path(__file__).parent / "sentiment_model.joblib"
+HERE = Path(__file__).parent
+
+# Two models, same features, differing only in class_weight. Keeping both
+# makes the central trade-off of this project something you can switch on and
+# off rather than something you have to take on trust.
+MODELS = {
+    "Complaint-finding (class_weight='balanced')": HERE / "sentiment_model.joblib",
+    "Everyday accuracy (unweighted)": HERE / "sentiment_model_unweighted.joblib",
+}
+
+SCORES = {
+    "Complaint-finding (class_weight='balanced')":
+        dict(accuracy=0.8881, balanced=0.6636, macro_f1=0.5687, neg_recall=0.5802),
+    "Everyday accuracy (unweighted)":
+        dict(accuracy=0.9408, balanced=0.4464, macro_f1=0.5026, neg_recall=0.2222),
+}
 
 st.set_page_config(page_title="Review Sentiment Analyzer",
                    page_icon="*", layout="centered")
@@ -31,13 +46,8 @@ COLOURS = {"negative": "#e34948", "neutral": "#eda100", "positive": "#1baf7a"}
 
 
 @st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
-
-
-model = load_model()
-vec = model.named_steps["tfidf"]
-clf = model.named_steps["clf"]
+def load_model(path_str):
+    return joblib.load(path_str)
 
 
 def word_contributions(text, predicted_class, top_n=8):
@@ -68,6 +78,34 @@ st.write(
     "Paste an Amazon product review. The model classifies it as negative, "
     "neutral or positive, and shows which words drove the decision."
 )
+
+choice_model = st.radio(
+    "Model",
+    list(MODELS),
+    horizontal=False,
+    help="Same features and same training data. The only difference is whether "
+         "the rare classes are up-weighted during fitting.",
+)
+
+model = load_model(str(MODELS[choice_model]))
+vec = model.named_steps["tfidf"]
+clf = model.named_steps["clf"]
+
+_s = SCORES[choice_model]
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Accuracy", f"{_s['accuracy']:.4f}")
+c2.metric("Balanced acc.", f"{_s['balanced']:.4f}")
+c3.metric("Macro F1", f"{_s['macro_f1']:.4f}")
+c4.metric("Negative recall", f"{_s['neg_recall']:.4f}")
+
+if choice_model.startswith("Everyday"):
+    st.warning(
+        "Higher accuracy, but it finds only **22%** of complaints against 58%. "
+        "Fine for judging a single review, wrong for a system whose job is "
+        "surfacing unhappy customers."
+    )
+
+st.divider()
 
 EXAMPLES = {
     "— choose an example —": "",
@@ -139,7 +177,11 @@ if st.button("Analyze sentiment", type="primary"):
                 "*\"worked for two weeks\"* or *\"what I expected for the price\"*. "
                 "Words from outside the domain — smartphone, laptop, headphones — "
                 "have coefficients fitted to a handful of reviews and should not "
-                "be trusted. The chart above shows exactly which words drove it."
+                "have coefficients fitted to a handful of reviews and should "
+                "not be trusted. The chart above shows exactly which words "
+                "drove it. Try the **unweighted** model above on the same "
+                "text - mild praise like 'good' reads as positive there, "
+                "because neutral is no longer multiplied by 7.7x."
             )
 
 with st.expander("About this model"):
