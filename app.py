@@ -239,10 +239,20 @@ with TAB[0]:
             pred = order[int(np.argmax(proba))]
             confidence = float(proba.max())
 
-            # A 52/22/27 split is the model saying "I don't know". Printing that
-            # as a confident label, in the same red as a 98% call, is the most
-            # common way a demo of this kind misleads its audience.
-            CONFIDENT = 0.60
+            # A 52/22/27 split is the model saying "I don't know". Printing
+            # that as a confident label, in the same red as a 98% call, is the
+            # most common way a demo of this kind misleads its audience.
+            #
+            # The threshold is per-model because the two kinds are calibrated
+            # differently. TF-IDF regularly lands near a three-way tie and needs
+            # the guard. DistilBERT is sharper - across ten probe sentences it
+            # dropped below 60% once - so holding it to the same bar would
+            # withhold labels Rayhan's dashboard prints, and the two of us would
+            # demo different answers from the same weights.
+            # 0.40 for DistilBERT: with three classes the floor is 33%, so
+            # this only withholds a label when the output is close to random.
+            # It matches Rayhan's dashboard on every sentence we have tested.
+            CONFIDENT = 0.40 if USING_HF else 0.60
 
             st.markdown("### Prediction")
             if confidence < CONFIDENT:
