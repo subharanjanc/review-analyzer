@@ -129,6 +129,41 @@ def load_hf():
     return torch, tk, md
 
 
+EMB_MODEL = "sentence-transformers/all-MiniLM-L12-v2"
+
+
+@st.cache_resource
+def load_embedder():
+    """MiniLM-L12, 33M parameters. Embeds a product name in well under a second."""
+    import torch
+    from transformers import AutoTokenizer, AutoModel
+    torch.set_num_threads(2)
+    tk = AutoTokenizer.from_pretrained(EMB_MODEL)
+    md = AutoModel.from_pretrained(EMB_MODEL).eval()
+    return torch, tk, md
+
+
+@st.cache_data
+def load_clusters():
+    import json
+    cent = np.load(HERE / "cluster_centroids.npy")
+    with open(HERE / "cluster_names.json", encoding="utf-8") as f:
+        names = {int(k): v for k, v in json.load(f).items()}
+    prods = pd.read_csv(HERE / "products_categorised.csv")
+    return cent, names, prods
+
+
+def embed_one(text):
+    torch, tk, md = load_embedder()
+    enc = tk([text], padding=True, truncation=True, max_length=64,
+             return_tensors="pt")
+    with torch.no_grad():
+        h = md(**enc).last_hidden_state
+    m = enc["attention_mask"].unsqueeze(-1).float()
+    v = ((h * m).sum(1) / m.sum(1)).numpy()
+    return (v / np.linalg.norm(v, axis=1, keepdims=True))[0]
+
+
 def word_contributions(text, predicted_class, vec, clf, top_n=8):
     """Which words pushed the prediction towards the chosen class.
 
@@ -154,7 +189,7 @@ st.title("Review Sentiment Analyzer")
 st.caption("Project 1 · Task 1 · Subha & Rayhan — Ironhack AI Engineering, AI FT SEPT 26")
 
 # TO ADD A TAB: put its name here and add a `with TAB[n]:` block below.
-TABS = ["Review analyzer", "About the models"]
+TABS = ["Review analyzer", "Product categories", "About the models"]
 TAB = st.tabs(TABS)
 
 # ================================================================= tab 1
@@ -322,6 +357,92 @@ with TAB[0]:
 
 # ================================================================= tab 2
 with TAB[1]:
+    st.subheader("Which category does a product belong to?")
+    st.write(
+        "Task 2. The 39 products were grouped into six meta-categories by "
+        "embedding each **product name** with a sentence model and running "
+        "KMeans over those vectors. Type any product name below and it is "
+        "placed in the nearest category."
+    )
+
+    cent, cnames, prods = load_clusters()
+
+    PRODUCT_EXAMPLES = {
+        "— choose an example —": "",
+        "A tablet": "Fire HD 10 Tablet, 32 GB, Wi-Fi",
+        "An e-reader": "Kindle Paperwhite e-reader with backlight",
+        "A charger": "Official 9W USB power adapter",
+        "A case": "Leather protective cover for Kindle",
+        "A speaker": "Echo Dot smart speaker with Alexa",
+        "Something it has never seen": "Bluetooth running headphones",
+    }
+    pick = st.selectbox("Try an example, or write your own",
+                        list(PRODUCT_EXAMPLES), key="prod_example")
+    product = st.text_input("Product name", value=PRODUCT_EXAMPLES[pick],
+                            placeholder="Fire HD 8 Tablet, 16 GB, Wi-Fi")
+
+    if st.button("Categorise product"):
+        if not product.strip():
+            st.warning("Enter a product name first.")
+        else:
+            with st.spinner("Embedding..."):
+                v = embed_one(product)
+            d = np.linalg.norm(cent - v, axis=1)
+            order = np.argsort(d)
+            best = int(order[0])
+            # cosine similarity, since both are unit vectors
+            sims = cent @ v
+
+            st.markdown("### Category")
+            st.markdown(
+                f"<span style='font-size:2.2rem;font-weight:700;color:{FLUX_DK}'>"
+                f"{cnames[best]}</span>", unsafe_allow_html=True)
+            st.caption(
+                f"Closest of six, similarity {sims[best]:.3f}. "
+                f"Runner-up: **{cnames[int(order[1])]}** at {sims[int(order[1])]:.3f}."
+            )
+
+            gap = sims[best] - sims[int(order[1])]
+            if gap < 0.05:
+                st.warning(
+                    f"The top two are only {gap:.3f} apart, so this one sits "
+                    f"near a boundary. Product names outside the Amazon device "
+                    f"range have nothing close to match against."
+                )
+
+            st.markdown("### What is already in that category")
+            members = (prods[prods["category"] == cnames[best]]
+                       .sort_values("reviews", ascending=False))
+            st.dataframe(
+                members[["product_name", "reviews", "mean_rating"]]
+                .style.format({"mean_rating": "{:.2f}"}),
+                hide_index=True, use_container_width=True)
+
+            st.markdown("### Similarity to every category")
+            st.dataframe(
+                pd.DataFrame({"category": [cnames[i] for i in order],
+                              "similarity": [sims[i] for i in order]})
+                .style.format({"similarity": "{:.3f}"}),
+                hide_index=True, use_container_width=True)
+
+    st.divider()
+    st.markdown("#### The six categories")
+    summary = (prods.groupby("category")
+               .agg(products=("product_name", "size"), reviews=("reviews", "sum"),
+                    mean_rating=("mean_rating", "mean"))
+               .sort_values("reviews", ascending=False).reset_index())
+    st.dataframe(summary.style.format({"mean_rating": "{:.2f}"}),
+                 hide_index=True, use_container_width=True)
+
+    st.caption(
+        "Agreement with a hand-labelled answer, measured by adjusted Rand "
+        "index: **0.8659**. TF-IDF over the same names scored 0.5087, and the "
+        "first attempt — product name plus Amazon's own category string — "
+        "scored 0.0446, which is no better than labelling at random."
+    )
+
+# ================================================================= tab 3
+with TAB[2]:
     st.markdown(
         """
 ### Three models, same test set
