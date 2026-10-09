@@ -30,8 +30,32 @@
   "complaints": [],
   "n_negative": 0,
   "min_df": 0,
+  "praise": [],
+  "n_positive": 22,
+  "min_df_pos": 0,
   "quotes": [],
   "evidence_rule": "none",
+  "praise_quotes": [
+   {
+    "helpful": 271,
+    "rating": 4.0,
+    "title": "Lightweight, good viewing area. 1,",
+    "text": "Finally received the Kindle Lighted Leather Cover for the newest version Kindle. It is VERY lightweight and I had to double and triple check the description considering it states this is a leather cover. The front cover is very thin with a medium-weight cardboard feel to it. The leather on the front cover is extremely thin and you can immediately tell the surface will be easily scratched and marred with normal everyday use. The inside of the front cover has a thin microfiber material to protect the screen. The back cover is hollowed out plastic to form-fit your Kindle and snaps in with relative ease.Using the enclosed graphic instruction card, I removed the Kindle as shown, having to use just enough pressure to make me a bit concerned for someone who would place and remove their Kindle in this cover frequently. However, I plan on using this cover as a full-time solution for both protection and as a light source.I went ahead and pulled up a book and switched the light on, heading to a closet to see how this looked in complete darkness. The light pulls out of the back cover and is nice and stiff and has a locked full-out position. The spread of the light is greater on top obviously but it does reach the entire screen on the Kindle. There was no glare or reflection and I was able to easily read the page without any noticeable straining.If I were to choose between this design and the Kindle Keyboard lighted cover, which I have used since its release, I would choose this newer cover.Read more"
+   },
+   {
+    "helpful": 25,
+    "rating": 4.0,
+    "title": "Took me some time to get my $$$ worth",
+    "text": "Initially I purchased this solely for the purchase of controlling Lutron lights. However, after being @ a friends house for a BBQ and watching them use this for music, I decided to give it a try to see if it could replace my Sonos.It can't, however, I've found that I'm much more likely to play Spotify through this using voice controls if I'm in and out of a room for a shorter period of time and not near a Sonos to hit play/too busy to pull the phone out for Sonos app. This thing has also become more powerful as more IoT devices and services integrate with Echo or IFTTT. There is a TREMENDOUS amount of potential... give it a try and spend at least a week getting to know Alexa. You won't be sorry."
+   },
+   {
+    "helpful": 11,
+    "rating": 5.0,
+    "title": "Fun and useful assistant",
+    "text": "I had been looking at the echo for awhile but wasn't an early adopter. As much as I geek out over products like this I wanted to wait till the skills library was a bit more tested and expanded. Well imagine my surprise when I got this as a gift! Absolutely love using my Echo/Alexa. Weather, music, shopping lists, and the constant things they are adding. Yes it has its moments when it can't understand something but I do tend to mumble at times. Don't expect it to be a search engine giving multile results to an inquiry but it's a great speaker, home assistant, kitchen helper with measurements, and it even controls my home temperature on my Honeywell thermostat. Next purchase...smart plugs so I can turn some items off and on with my voice. Love the interactivity and I haven't even scratched the surface yet on all Alexa has to offer. I have found the Love my Echo website to discover new things I haven't tried yet."
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": null,
   "model": null
  },
@@ -72,6 +96,40 @@
   "complaints": [],
   "n_negative": 21,
   "min_df": 0,
+  "praise": [
+   {
+    "word": "five",
+    "log_odds": 3.6281687796648106,
+    "n_reviews": 76
+   },
+   {
+    "word": "works",
+    "log_odds": 3.5464907486505433,
+    "n_reviews": 70
+   },
+   {
+    "word": "great",
+    "log_odds": 3.4260445955746763,
+    "n_reviews": 62
+   },
+   {
+    "word": "well",
+    "log_odds": 2.4478784599824337,
+    "n_reviews": 23
+   },
+   {
+    "word": "love",
+    "log_odds": 2.208648770916599,
+    "n_reviews": 18
+   },
+   {
+    "word": "stars",
+    "log_odds": 2.1415845403360536,
+    "n_reviews": 86
+   }
+  ],
+  "n_positive": 222,
+  "min_df_pos": 5,
   "quotes": [
    {
     "helpful": 0,
@@ -93,6 +151,27 @@
    }
   ],
   "evidence_rule": "lowest rated (no helpful votes)",
+  "praise_quotes": [
+   {
+    "helpful": 6,
+    "rating": 4.0,
+    "title": "Good First Generation Product",
+    "text": "Good product that does the basics. Too bad you have to buy a specific light control or security system to make this useful. My Smart TV's are connected to the internet, so why not control them too? But I was impressed when I asked \"Alexa, whats on TV for the Olympics tonight?\" and the response was Swimming at xx time, Gymnastics at yy time. Far more info than the TV guide on screen showing only a 4 hour block on NBC. It is the beginning of things to come."
+   },
+   {
+    "helpful": 1,
+    "rating": 5.0,
+    "title": "Nice tablet, great price.",
+    "text": "My husband's previous tablet died a sudden death, so I gave it back and bought this FIRE. The sound volume and quality is much better."
+   },
+   {
+    "helpful": 1,
+    "rating": 5.0,
+    "title": "Great tablet",
+    "text": "My mom loves the kindle fire hd 8. She had the first kindle and it was time for an upgrade! Great buy for her birthday present!!"
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": "Most buyers will have a phone or other charger that will work so you probably don't need to buy this . Need to constantly make sure plugged in - slightly too small . Not as many free good apps like apple have it .",
   "model": "sshleifer/distilbart-cnn-12-6"
  },
@@ -164,6 +243,40 @@
   ],
   "n_negative": 61,
   "min_df": 5,
+  "praise": [
+   {
+    "word": "perfect",
+    "log_odds": 3.715240307460986,
+    "n_reviews": 370
+   },
+   {
+    "word": "love",
+    "log_odds": 3.6492312198904235,
+    "n_reviews": 1040
+   },
+   {
+    "word": "wife",
+    "log_odds": 3.1686966010929165,
+    "n_reviews": 214
+   },
+   {
+    "word": "awesome",
+    "log_odds": 3.0911759628520894,
+    "n_reviews": 198
+   },
+   {
+    "word": "backlight",
+    "log_odds": 3.03416570813531,
+    "n_reviews": 187
+   },
+   {
+    "word": "makes",
+    "log_odds": 2.9849754639445383,
+    "n_reviews": 178
+   }
+  ],
+  "n_positive": 3952,
+  "min_df_pos": 79,
   "quotes": [
    {
     "helpful": 23,
@@ -185,6 +298,27 @@
    }
   ],
   "evidence_rule": "most helpful",
+  "praise_quotes": [
+   {
+    "helpful": 221,
+    "rating": 4.0,
+    "title": "I recieved it today!",
+    "text": "I have had the Kindle Keyboard with it's lighted cover and now I have the new Kindle with lighted cover. I will briefly compare them and then list the pros and cons of this cover.In comparison:-The kindle keyboard in the cover is much heavier than the new kindle in it's cover. The new case does a much better job of securing the kindle as well, it is no longer hinged only on one edge, but instead it is form fit inside of a rigid rubber shell that attaches to the back of the new kindle-The lighting is about the same between both cases, but where the old case lit the screen from the top right corner, the new case lights the screen from the top middle.-I feel like the old light mechanism was more durable. The light bar on this cover is made out of very stiff, thin plastic instead of the thick rubbery plastic that contained the light on the old cover. It also hinges open instead of pulling out of the case, and the hinge feels subpar.-The light on the new case is less angled and tends to get in my eyes more when reading than the old kindle keyboard case did.All in all I still like the new case. It fits the new kindle very well and does not increase the size or weight very much. The leather is somewhat thin but not horribly so and it looks sleek on the kindle. I will be keeping this case.Pros:Compact case that looks very sleekTight and secure fitUses the Kindle's batteries so no additional power is needed.Provides adequate lighting across the entire screen.Cons:Lightbar hinge seems very cheap.Since I only received this today, I cannot yet evaluate the additional drain that this case will place on the Kindle's battery.Read more"
+   },
+   {
+    "helpful": 103,
+    "rating": 5.0,
+    "title": "Excellent e-reader",
+    "text": "This review comes with a caveat. Many tech sites say e-readers are dying, kind of like the \"Nintendo is doooooomed\" crowd, or the GPS is obsolete argument. I don't disagree. As our phones become more sophisticated and the phone screen sizes continue to balloon up to tablet-like proportions, dedicated devices will continue to go the way of the dodo. But sometimes, if you're interested enough, a dedicated device is precisely what you need. I had (key word: \"had\") an ipad mini 2 that I had been using as my all-round in-bed Netflix + reading machine. Except I'd get about 3 seconds in before getting nudged by my wife due to half the room being lit up. As I spend more time reading on my ipad than watching Netflix, I decided to sell my ipad mini and just buy 2 kindles - one for my wife and myself. The new Kindle Paperwhite feels just as solid as the outgoing model, but the resolution is now 300 dpi. The e-ink screen almost feels like a page of a paperback when you swipe, and in my personal preference, I like that.The battery is rated to last 6-8 weeks on average between the various tech sites, which trumps my ipad mini by several life cycles. Yes the screen has to refresh unlike a tablet, but it's not very noticeable and I don't find it distracting at all for reading.Cases aren't nearly as ubiquitous as for the ipad, so you've basically got the standard Amazon-branded leather case or offbrand cases from sites like Ebay.I enjoy reading, and I frankly don't want to wear any thicker glasses than I already have. Backlight can cause bad eye strain, so that's another plus for the Kindle over the iPad.In summary, TL;DR: if you want a dedicated e-reader, you can't go wrong with the Kindle PW. The price:performance ratio is much better than the Voyage IMHO.But that's assuming that you're somebody who spends enough time reading to make the Kindle device worth carrying. If you only read for a few seconds here and there, adding an extra device to lug around isn't for you. So like a Garmin, the market has a specific niche and YMMV depending on your needs. For me, the Kindle was a great fit."
+   },
+   {
+    "helpful": 64,
+    "rating": 4.0,
+    "title": "Excellent e-reader",
+    "text": "I am a big fan of e-readers. I prefer the e-ink screens over tablet screen when reading books. I decided to pick up the new Kindle Voyage. Here are my thoughts.First, the Kindle is much sleeker and lighter than the Paperwhite model. It's very easy to hold for a long length of time without getting tired.Secondly, the addition of the page turn buttons is a welcomed addition. The buttons make it so easy to hold the Kindle with one hand and turn pages.Lastly the screen. I marked off a star because I had to return my first Voyage directly to Amazon because the top half of the screen had a yellow tint to it that was very distracting while reading. The replacement Kindle Voyage that I received had a perfect screen and the 300 ppi looks amazing. That being said, Amazon needs to really focus on quality control because I've read that the yellow tint on the screen is a common issue. If you're spending $200 for an e-reader, then the screen should be perfect. Especially since this is the 3rd generation of the lighted screens for the e-readers.If you're an avid reader, then the Kindle Voyage would be a worthy upgrade to make. If you're a casual reader who has a Paperwhite, you're probably okay with what you have."
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": "The Kindle Voyage, when it worked, was great - the page turns make the reading experience seamless and the ink is crisp, making it a real upgrade from the Paperwhite . It started to freeze up quickly after I got it . I guess Amazon needs a better QA department .",
   "model": "sshleifer/distilbart-cnn-12-6"
  },
@@ -256,6 +390,40 @@
   ],
   "n_negative": 57,
   "min_df": 5,
+  "praise": [
+   {
+    "word": "love",
+    "log_odds": 3.319836045856294,
+    "n_reviews": 1013
+   },
+   {
+    "word": "amazing",
+    "log_odds": 3.3138983737850767,
+    "n_reviews": 201
+   },
+   {
+    "word": "news",
+    "log_odds": 3.27854115545684,
+    "n_reviews": 194
+   },
+   {
+    "word": "loves",
+    "log_odds": 3.1814298687716906,
+    "n_reviews": 176
+   },
+   {
+    "word": "fun",
+    "log_odds": 3.1623635142695115,
+    "n_reviews": 519
+   },
+   {
+    "word": "great",
+    "log_odds": 3.0238825779870764,
+    "n_reviews": 1658
+   }
+  ],
+  "n_positive": 3435,
+  "min_df_pos": 68,
   "quotes": [
    {
     "helpful": 292,
@@ -277,6 +445,27 @@
    }
   ],
   "evidence_rule": "most helpful",
+  "praise_quotes": [
+   {
+    "helpful": 144,
+    "rating": 5.0,
+    "title": "Netflix, HBO Go, Amazon Prime and XBMC on one box... could it get any better!",
+    "text": "I seriously wonder why it took me to get FireTV for so long. I originally had a Roku XS and then I stupidly bought a Roku 4. Both devices were all right but neither could handle 5.1 audio from Netflix on my Vizio sound bar (essentially your device must be cable of handling Dolby Digital Plus and nothing less using Roku). I finally decided to give FireTV a try and I'm amazed. Not only does it convert DD+ to DD on Netflix and HBO Go, I can install XBMC (Kodi) on it! I wish I knew about this before I bought my Roku 4 and HTPC. I now literally have no use for my HTPC anymore... FireTV can handle EVERYTHING now and all with DD and DTS 5.1 audio. Even better, I have a ton of smart devices and 3 Echos... I can now control all of these devices directly from the remote. This is seriously one of the best purchases I have made in the past year."
+   },
+   {
+    "helpful": 93,
+    "rating": 5.0,
+    "title": "Great",
+    "text": "Love it, had the stick and it was kinda slow navigating. This one is much faster. Was going to use this and cancel cable. When I told my cable company I wanted to cancel and I was just going to stream everything they cut my bundle cost by 100. I kept cable but I also still use my firetv alot."
+   },
+   {
+    "helpful": 60,
+    "rating": 5.0,
+    "title": "Happy with my Amazon fire tv",
+    "text": "This box is wonderful, meets my expectations plus some. I gave up cable and tried it. I don't watch a lot of movies but this box comes with a lot of selections in my opinion more than basic cable, and if you have prime even more selections, theres a lot of free shows just download the apps for them."
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": "Stay away from certified refurbished Amazon Fire TV . Amazon needs to re-visit its refurbishment process and quality control of the refurbished products .",
   "model": "sshleifer/distilbart-cnn-12-6"
  },
@@ -348,6 +537,40 @@
   ],
   "n_negative": 40,
   "min_df": 5,
+  "praise": [
+   {
+    "word": "love",
+    "log_odds": 3.5980417749989764,
+    "n_reviews": 765
+   },
+   {
+    "word": "family",
+    "log_odds": 3.1889777753898523,
+    "n_reviews": 169
+   },
+   {
+    "word": "great",
+    "log_odds": 3.083289444616814,
+    "n_reviews": 1067
+   },
+   {
+    "word": "amazing",
+    "log_odds": 3.0832894446168133,
+    "n_reviews": 152
+   },
+   {
+    "word": "day",
+    "log_odds": 3.0363009351808943,
+    "n_reviews": 145
+   },
+   {
+    "word": "fun",
+    "log_odds": 3.020134301325548,
+    "n_reviews": 429
+   }
+  ],
+  "n_positive": 2415,
+  "min_df_pos": 48,
   "quotes": [
    {
     "helpful": 4,
@@ -369,6 +592,27 @@
    }
   ],
   "evidence_rule": "most helpful",
+  "praise_quotes": [
+   {
+    "helpful": 32,
+    "rating": 5.0,
+    "title": "I love my Alexa!!",
+    "text": "Best Birthday present I ever got... I have my lights set up using Alexa and thermostat.. Also use the shopping list everyday helps to remember when I am at the store shopping.. love playing millions of trivia games and all the information she gives all day.. also love the many new apps added almost ever day... I Love my Alexa I highly recommend it!!"
+   },
+   {
+    "helpful": 8,
+    "rating": 5.0,
+    "title": "Outstanding for all ages",
+    "text": "Echo or Alexa from Amazon is smart and learns along with you. She is a nice gift for teens as well as seniors. It's the kind of thing you might think you didn't want or need until you get it and begin to use it. We like the sound quality of the speaker."
+   },
+   {
+    "helpful": 4,
+    "rating": 4.0,
+    "title": "Great for on-demand music and smart light control",
+    "text": "Echo seems well engineered. The voice response is very natural and usually understands what I'm saying. Echo wouldn't connect to my home WiFi because I had two networks with the same SSIDs (one 2.4ghz and one 5ghz). Once I changed the name (SSID) of one of the networks, Echo connected right up and hasn't had any trouble since. Because of the WiFi issue, I took 1 star away."
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": "Bought this as a present for my boyfriend, and we both were very disappointed . Took some getting use to for me to get the commands right to change my nest thermostat . Must have Amazon paid service to play music from the cloud and must be set up from the mobile app .",
   "model": "sshleifer/distilbart-cnn-12-6"
  },
@@ -440,6 +684,40 @@
   ],
   "n_negative": 486,
   "min_df": 9,
+  "praise": [
+   {
+    "word": "beat",
+    "log_odds": 3.903653480131533,
+    "n_reviews": 389
+   },
+   {
+    "word": "excellent",
+    "log_odds": 3.5895228683871157,
+    "n_reviews": 853
+   },
+   {
+    "word": "loves",
+    "log_odds": 3.298254342350269,
+    "n_reviews": 1913
+   },
+   {
+    "word": "easy",
+    "log_odds": 2.828601541847723,
+    "n_reviews": 2791
+   },
+   {
+    "word": "value",
+    "log_odds": 2.5112890185192738,
+    "n_reviews": 677
+   },
+   {
+    "word": "awesome",
+    "log_odds": 2.391197046256412,
+    "n_reviews": 772
+   }
+  ],
+  "n_positive": 15866,
+  "min_df_pos": 317,
   "quotes": [
    {
     "helpful": 60,
@@ -461,6 +739,27 @@
    }
   ],
   "evidence_rule": "most helpful",
+  "praise_quotes": [
+   {
+    "helpful": 780,
+    "rating": 5.0,
+    "title": "This thing is awesome! Here's why you need it. 13,",
+    "text": "Since the Fire TV stick was announced, I've heard a lot of people wonder if it was something worth picking up, essentially asking what does this thing do that my TV doesn't do already The answer is going to be different for different people, but here's an easy way to think about it Amazon Fire TV Stick is an excellent purchase if:-Your TV is not a smart TV. Meaning your TV or dvd player did not come pre-loaded with apps such as Netflix, Youtube, Pandora etc...-Your TV is a smart TV, but apps do not perform well. Some smart TVs have painful performance when streaming video, apps can be difficult to update, wifi connection can be spotty etc...-You want to access Youtube, Netflix, Amazon Prime, Pandora, and other such apps on your TV-You are an Amazon Prime Member and want to access your Prime Video, Prime Music, and Prime Photo accounts-You want to participate in casual gaming on your television.-You want to listen to music on your TV-You want to have portability. In other words, Television access to the above services while you are travelling. (Amazon says the capability to use in hotels/dorms etc... with shared wifi that requires frequent password entry is coming soon)So, the bottom line is that the Fire TV Stick allows you to access your movies, music and photos as well as games and more via your television. If your TV already does these things well, or you're already doing them via other devices such as a game console, then this may not be worth your while.So, how easy is it to use I'm telling you, you do not have to have an ounce of technological know how to have this thing up and running in a matter of minutes.Read more"
+   },
+   {
+    "helpful": 740,
+    "rating": 5.0,
+    "title": "Best streamer for your dollar - thoughts from a roku firetv box user 8,",
+    "text": "UPDATE! 11/11/15: More than a year now of using the stick literally every single evening for netflix, and it has been overall very reliable.Bottom line This is the best streaming device for the dollar(In my humble opinion) It's cheap, it handles netflix/prime/hboGo/plex/games/a lot more doesn't seem much slower than the full firetv box. I started with a Roku2 in the living room which got pushed to the bedroom when i got the firetv box, then the firetv stick replaced the roku2. I tried the roku stick but returned it because it was just too darn slow. I'm completely firetv now and 100 happy with it..What it does: It adds internet/streaming functionality to any tv/monitor with an HDMI port. You can use any of the thousands of paid and/or free apps such as netflix, amazon prime, hulu, plex, news, digital fireplace, etc... There's a ton you can do. With some extra effort you can sideload things like Kodi and 3rd party apps. It's super simple to use, and the image quality can be great if your internet connection is fast.The Good stuff...-Same pricerange as the less capable/less powered Chromecast Roku stick-More ram/memory than the competition(keeps things running smooth)-More storage space than the competition, you can store more apps/games/etc..-You can do some gaming with it, but the firetv box is better suited-So small you can bring it pretty much anywhere with ease.-Simple clean interface.-Lots of games/apps to choose from-The phone app is actually pretty usefulNot as good stuff...-No connections other than usb for power, if you need ethernet/audio in/out, get the box!Read more"
+   },
+   {
+    "helpful": 650,
+    "rating": 5.0,
+    "title": "Must have device, especially for Amazon Prime members 28,",
+    "text": "I was fortunate to order one of these as soon as it was announced. As an Amazon Prime member, I was able to buy the Fire TV Stick for 19 during a two day sale. I figured, for that price, I might as well test it out!Set up was easy and straight forward. I find that the interface is quick and easy to use. The interface and streaming on the Stick is much faster than the Amazon app built into my HDTV. This fact alone made this a great purchase. Here are some more thoughts I have on the Fire TV Stick so far: PROS:- Quick, easy to use, polished interface- Wireless streaming works really well- Amazon Instant video loads, fast forwards, and rewinds really fast- A dedicated Prime Menu allows Prime members to easily see what free content is available- Unlike Chromecast, the Fire TV Stick includes a remote- Can stream your own videos by first uploading them to your cloud disk- Can play quite a few casual games- Awesome, irresistible price for Amazon Prime users. I got it for 19 during the two day sale.- Better specs than Chromecast and Roku Stick- Ultraportable. I plan to use Fire TV Stick when I travel for work and to visit family- Stream local videos and other content using the Plex app http://www.amazon.com/Plex-Inc/dp/B004Y1WCDE/ (Thanks BikeRider!) CONS:- Included remote doesn't support voice search. That remote costs extra. Would be nice to have a second Fire TV Stick model that includes the voice search remote, rather can requiring us to buy a second remote.- Probably won't be able to use universal remotes with this unless Logitech offers a compatible device.- Not as fast as Fire TV, but since the Stick is so much cheaper, this is not really an issue.Read more"
+   }
+  ],
+  "praise_rule": "most helpful",
   "generated": "Reviews are good. But, I realized they left reviews before they receive it . It is impossible to type & see Korean language. Do not buy this tablet if you are Korean. It is bad for web surfing.",
   "model": "sshleifer/distilbart-cnn-12-6"
  }

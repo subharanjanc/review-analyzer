@@ -236,6 +236,66 @@ def build_flat(cat, s):
     return " ".join(L)
 
 
+# Two more greens, kept away from the menu's neon FLUX so the meaning is in
+# the colour rather than in the label: PRAISE is the calm leaf green used for
+# everything customers liked, COMPLAINT the muted red for everything they did
+# not. Both pass WCAG AA on white.
+PRAISE = "#2E7D32"
+COMPLAINT = "#B3261E"
+
+
+def term_bars(terms, colour):
+    """A log-odds bar per term, widths relative to the strongest in the list.
+
+    st.dataframe's ProgressColumn cannot be coloured, and the whole point here
+    is that praise and complaints read apart at a glance, so these are plain
+    divs. Width is proportional to log-odds, which is what the measure means -
+    twice the bar is twice the log-odds, not twice the word count.
+    """
+    top = max(t["log_odds"] for t in terms) or 1.0
+    rows = []
+    for t in terms:
+        pct = max(4.0, 100.0 * t["log_odds"] / top)
+        rows.append(
+            "<div style='display:flex;align-items:center;gap:.6rem;"
+            "margin:.28rem 0;font-size:.92rem'>"
+            "<div style='width:7.5rem;text-align:right;font-weight:600'>{w}</div>"
+            "<div style='flex:1;background:#ececec;border-radius:3px;height:1.05rem'>"
+            "<div style='width:{p:.1f}%;background:{c};height:100%;"
+            "border-radius:3px'></div></div>"
+            "<div style='width:3rem;color:{c};font-variant-numeric:tabular-nums'>"
+            "{v:+.2f}</div>"
+            "<div style='width:9rem;color:#666;font-size:.82rem'>in {n} reviews</div>"
+            "</div>".format(w=t["word"], p=pct, c=colour,
+                            v=t["log_odds"], n=format(t["n_reviews"], ","))
+        )
+    return "".join(rows)
+
+
+def quote_block(quotes, rule, kind, colour):
+    """The three reviews other shoppers endorsed, tinted to match their side."""
+    if not quotes:
+        st.caption("No %s reviews in this category." % kind)
+        return
+    if rule == "most helpful":
+        st.caption(
+            "The three %s reviews other shoppers voted most helpful - not a "
+            "random sample. `reviews.numHelpful` is populated for 98.6%% of "
+            "rows." % kind)
+    else:
+        st.caption("Nobody voted on these, so they are the %s instead." % rule)
+    for q in quotes:
+        votes = ("%d readers found this helpful" % q["helpful"]
+                 if q["helpful"] else "%.0f stars" % q["rating"])
+        head = ("<b>%s</b> - " % q["title"]) if q["title"] else ""
+        st.markdown(
+            "<div style='border-left:4px solid {c};padding:.45rem .85rem;"
+            "margin:.45rem 0;background:{c}0f'>{h}{t}"
+            "<div style='color:#666;font-size:.8rem;margin-top:.35rem'>{v}</div>"
+            "</div>".format(c=colour, h=head, t=q["text"][:700], v=votes),
+            unsafe_allow_html=True)
+
+
 def embed_one(text):
     torch, tk, md = load_embedder()
     enc = tk([text], padding=True, truncation=True, max_length=64,
@@ -678,8 +738,9 @@ with TAB[2]:
     st.write(
         "Task 3. One article per meta-category from Task 2. Everything "
         "countable is **computed from the data** - review counts, ratings, top "
-        "products, the product people complain about most, the complaint "
-        "themes. A generative model is called **once**, at the end, for the "
+        "products, the product people complain about most, and the themes on "
+        "both sides - what customers praise in green, what they complain "
+        "about in red. A generative model is called **once**, at the end, for the "
         "single sentence that needs judgement, and it is labelled where it "
         "appears."
     )
@@ -731,6 +792,27 @@ with TAB[2]:
             "of this notebook did."
         )
 
+    # ------------------------------------------------------------- praise
+    st.markdown("### What customers praise")
+    if not s["praise"]:
+        st.info(
+            "Only %d positive reviews here - under the 25 needed before a "
+            "log-odds comparison means anything." % s["n_positive"])
+    else:
+        st.markdown(term_bars(s["praise"], PRAISE), unsafe_allow_html=True)
+        st.caption(
+            "How much more likely each word is in this category's %s positive "
+            "reviews than in its negative ones. A term must appear in at least "
+            "%s of them."
+            % (format(s["n_positive"], ","), format(s["min_df_pos"], ",")))
+        if any(w["word"] in ("five", "four", "stars", "star")
+               for w in s["praise"]):
+            st.caption(
+                ":grey[Note: *five* and *stars* here are Amazon's default "
+                "review title \"Five Stars\", not a theme customers chose to "
+                "write about.]")
+    quote_block(s["praise_quotes"], s["praise_rule"], "positive", PRAISE)
+
     # ---------------------------------------------------------- complaints
     st.markdown("### What the complaints are about")
     if not s["complaints"]:
@@ -740,42 +822,14 @@ with TAB[2]:
             "Only %d negative reviews here - under the 25 needed before a "
             "log-odds comparison means anything." % s["n_negative"])
     else:
-        cdf = pd.DataFrame(s["complaints"]).rename(columns={
-            "word": "term", "log_odds": "how much more likely in a complaint",
-            "n_reviews": "complaints containing it"})
-        st.dataframe(
-            cdf, hide_index=True, use_container_width=True,
-            column_config={
-                "how much more likely in a complaint": st.column_config.ProgressColumn(
-                    "log-odds vs praise", format="%.2f",
-                    min_value=0.0, max_value=float(max(
-                        c["log_odds"] for c in s["complaints"])) * 1.05)})
+        st.markdown(term_bars(s["complaints"], COMPLAINT), unsafe_allow_html=True)
         st.caption(
-            "Log-odds ratio with Dirichlet smoothing: how much more likely a "
-            "word is in this category's %d negative reviews than in its "
+            "The same measure with the sign flipped: how much more likely each "
+            "word is in this category's %s negative reviews than in its "
             "positive ones. Counted once per review, and a term must appear in "
             "at least %d of them - otherwise two chatty reviews invent a theme."
-            % (s["n_negative"], s["min_df"]))
-
-    # ---------------------------------------------------------- quotes
-    st.markdown("### What unhappy customers actually said")
-    if not s["quotes"]:
-        st.info("No negative reviews in this category at all.")
-    else:
-        if s["evidence_rule"] == "most helpful":
-            st.caption(
-                "The three complaints other shoppers voted most helpful - not "
-                "a random sample. `reviews.numHelpful` is populated for 98.6% "
-                "of rows.")
-        else:
-            st.caption(
-                "Nobody voted on the complaints here, so these are the "
-                "lowest-rated ones instead.")
-        for q in s["quotes"]:
-            votes = ("%d readers found this helpful" % q["helpful"]
-                     if q["helpful"] else "%.0f stars" % q["rating"])
-            head = ("**%s** - " % q["title"]) if q["title"] else ""
-            st.markdown("> %s%s\n>\n> *%s*" % (head, q["text"][:700], votes))
+            % (format(s["n_negative"], ","), s["min_df"]))
+    quote_block(s["quotes"], s["evidence_rule"], "negative", COMPLAINT)
 
     # ---------------------------------------------------------- the model
     st.markdown("### The generated line")
@@ -813,9 +867,15 @@ than to writing.
 **Cases & covers has 23 reviews and no negatives at all**, so there is nothing
 to mine and nothing to generate. The tab says so instead of inventing a theme.
 
-**Complaint terms are words, not reasons.** *returned*, *waste*, *horrible*
-tell you a complaint happened, not what broke. Reading the quotes is still
-necessary.
+**Terms are words, not reasons** - on both sides. *returned*, *waste*,
+*horrible* tell you a complaint happened, not what broke; *love*, *great*,
+*amazing* tell you people were pleased, not what pleased them. The quotes
+underneath each list are there because the words alone are not enough.
+
+**One praise list is an artefact.** In *Chargers & cables* the top terms are
+*five* and *stars* - that is Amazon's default review title "Five Stars", not
+something customers chose to say. It is left in rather than quietly filtered,
+because the same stopword list is what the notebook uses.
             """)
 
     with st.expander("The one-paragraph version (what the dashboard consumes)"):
