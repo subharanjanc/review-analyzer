@@ -178,6 +178,64 @@ def load_members(using_cat):
     return np.load(HERE / f)
 
 
+@st.cache_data
+def load_summaries():
+    """Task 3 articles, precomputed by notebooks/task3_hybrid_summaries.ipynb.
+
+    Structured rather than flat: the notebook writes one paragraph per
+    category for Rayhan's dashboard, this file keeps the parts separate so the
+    tab can lay them out. Same numbers, same complaint mining, same quotes,
+    same generated sentence - nothing is recomputed here, and no model runs at
+    request time.
+    """
+    import json
+    with open(HERE / "category_summaries_structured.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def build_flat(cat, s):
+    """Reassemble the notebook's one-paragraph article from the parts.
+
+    Kept identical to build_article() in the notebook so the expander shows
+    exactly what category_summaries.json holds - the format Rayhan's dashboard
+    reads.
+    """
+    L = ["%s - %s reviews across %d products, averaging %.2f stars."
+         % (cat, format(s["reviews"], ","), s["n_products"], s["rating"]),
+         "%.1f%% of reviews are positive and %.1f%% negative."
+         % (s["pct_positive"], s["pct_negative"]),
+         "Most reviewed: " + "; ".join(
+             "%s (%s reviews)" % (p["name"][:60], format(p["reviews"], ","))
+             for p in s["top3"]) + "."]
+
+    w = s["worst"]
+    if w is not None and w["stands_out"]:
+        L.append("Most complained about: %s - %.1f%% of its %s reviews are "
+                 "negative, against %.1f%% for the category, at %.2f stars."
+                 % (w["name"][:60], w["neg_rate"], format(w["reviews"], ","),
+                    s["pct_negative"], w["rating"]))
+    elif w is not None:
+        L.append("No single product stands out as worse than the rest; the "
+                 "highest negative rate is %.1f%% against %.1f%% for the "
+                 "category." % (w["neg_rate"], s["pct_negative"]))
+
+    if s["complaints"]:
+        L.append("Complaints centre on: " + ", ".join(
+            "%s (in %d reviews)" % (c["word"], c["n_reviews"])
+            for c in s["complaints"]) + ".")
+    else:
+        L.append("Too few negative reviews here to identify complaint themes.")
+
+    if s["generated"]:
+        L.append("What unhappy customers say: " + s["generated"])
+    elif s["quotes"]:
+        q = s["quotes"][0]
+        L.append("The most endorsed complaint (%d readers found it helpful): "
+                 "\"%s\"" % (q["helpful"], q["text"][:220]))
+
+    return " ".join(L)
+
+
 def embed_one(text):
     torch, tk, md = load_embedder()
     enc = tk([text], padding=True, truncation=True, max_length=64,
@@ -214,7 +272,8 @@ st.title("Review Sentiment Analyzer")
 st.caption("Project 1 · Task 1 · Subha & Rayhan — Ironhack AI Engineering, AI FT SEPT 26")
 
 # TO ADD A TAB: put its name here and add a `with TAB[n]:` block below.
-TABS = ["Review analyzer", "Product categories", "About the models"]
+TABS = ["Review analyzer", "Product categories", "Category summaries",
+        "About the models"]
 TAB = st.tabs(TABS)
 
 # ================================================================= tab 1
@@ -615,6 +674,159 @@ with TAB[1]:
 
 # ================================================================= tab 3
 with TAB[2]:
+    st.subheader("What are customers saying about each category?")
+    st.write(
+        "Task 3. One article per meta-category from Task 2. Everything "
+        "countable is **computed from the data** - review counts, ratings, top "
+        "products, the product people complain about most, the complaint "
+        "themes. A generative model is called **once**, at the end, for the "
+        "single sentence that needs judgement, and it is labelled where it "
+        "appears."
+    )
+
+    SUMM = load_summaries()
+    order_by_size = sorted(SUMM, key=lambda c: -SUMM[c]["reviews"])
+    cat = st.selectbox("Category", order_by_size, key="summary_cat")
+    s = SUMM[cat]
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Reviews", format(s["reviews"], ","))
+    c2.metric("Mean rating", "%.2f" % s["rating"])
+    c3.metric("Positive", "%.1f%%" % s["pct_positive"])
+    c4.metric("Negative", "%.1f%%" % s["pct_negative"])
+    st.caption("%d products in this category." % s["n_products"])
+
+    # ---------------------------------------------------------- top 3
+    st.markdown("### Most reviewed products")
+    st.dataframe(
+        pd.DataFrame(s["top3"]).rename(columns={
+            "name": "product", "reviews": "reviews",
+            "rating": "mean rating", "neg_rate": "% negative"})
+        .style.format({"mean rating": "{:.2f}", "% negative": "{:.1f}%"}),
+        hide_index=True, use_container_width=True)
+
+    # ---------------------------------------------------------- worst
+    st.markdown("### The one to avoid")
+    w = s["worst"]
+    if w is None:
+        st.info(
+            "No product in this category has %d or more reviews, so there is "
+            "not enough evidence to single one out." % 20)
+    elif w["stands_out"]:
+        st.error(
+            "**%s** - %.1f%% of its %s reviews are negative, against %.1f%% "
+            "for the category, at %.2f stars."
+            % (w["name"], w["neg_rate"], format(w["reviews"], ","),
+               s["pct_negative"], w["rating"]))
+    else:
+        st.success(
+            "Nothing stands out. The highest negative rate in this category is "
+            "%.1f%% (%s), against %.1f%% for the category as a whole - not far "
+            "enough above average to call it the worst."
+            % (w["neg_rate"], w["name"], s["pct_negative"]))
+        st.caption(
+            "Ranking by negative rate, not by mean star. Every product here "
+            "rates 4.4-4.8, so taking the minimum rating just returns whichever "
+            "best-seller has the most reviews - which is what the first version "
+            "of this notebook did."
+        )
+
+    # ---------------------------------------------------------- complaints
+    st.markdown("### What the complaints are about")
+    if not s["complaints"]:
+        st.info(
+            "No negative reviews in this category at all, so there is nothing "
+            "to mine." if s["n_negative"] == 0 else
+            "Only %d negative reviews here - under the 25 needed before a "
+            "log-odds comparison means anything." % s["n_negative"])
+    else:
+        cdf = pd.DataFrame(s["complaints"]).rename(columns={
+            "word": "term", "log_odds": "how much more likely in a complaint",
+            "n_reviews": "complaints containing it"})
+        st.dataframe(
+            cdf, hide_index=True, use_container_width=True,
+            column_config={
+                "how much more likely in a complaint": st.column_config.ProgressColumn(
+                    "log-odds vs praise", format="%.2f",
+                    min_value=0.0, max_value=float(max(
+                        c["log_odds"] for c in s["complaints"])) * 1.05)})
+        st.caption(
+            "Log-odds ratio with Dirichlet smoothing: how much more likely a "
+            "word is in this category's %d negative reviews than in its "
+            "positive ones. Counted once per review, and a term must appear in "
+            "at least %d of them - otherwise two chatty reviews invent a theme."
+            % (s["n_negative"], s["min_df"]))
+
+    # ---------------------------------------------------------- quotes
+    st.markdown("### What unhappy customers actually said")
+    if not s["quotes"]:
+        st.info("No negative reviews in this category at all.")
+    else:
+        if s["evidence_rule"] == "most helpful":
+            st.caption(
+                "The three complaints other shoppers voted most helpful - not "
+                "a random sample. `reviews.numHelpful` is populated for 98.6% "
+                "of rows.")
+        else:
+            st.caption(
+                "Nobody voted on the complaints here, so these are the "
+                "lowest-rated ones instead.")
+        for q in s["quotes"]:
+            votes = ("%d readers found this helpful" % q["helpful"]
+                     if q["helpful"] else "%.0f stars" % q["rating"])
+            head = ("**%s** - " % q["title"]) if q["title"] else ""
+            st.markdown("> %s%s\n>\n> *%s*" % (head, q["text"][:700], votes))
+
+    # ---------------------------------------------------------- the model
+    st.markdown("### The generated line")
+    if s["generated"]:
+        st.markdown(
+            "<div style='border-left:4px solid %s;padding:.6rem .9rem;"
+            "background:rgba(57,255,20,.07)'>%s</div>"
+            % (FLUX_DK, s["generated"]), unsafe_allow_html=True)
+        st.caption(
+            "This sentence, and only this sentence, was written by `%s`. It was "
+            "given the three quotes above and nothing else - no product names, "
+            "no counts - because those are already known exactly and a model "
+            "asked for them will guess." % s["model"])
+    else:
+        st.info(
+            "Nothing generated for this category: there are too few words of "
+            "complaint to summarise. The article above is entirely computed.")
+
+    # ---------------------------------------------------------- honesty
+    with st.expander("Where this still goes wrong"):
+        st.markdown(
+            """
+**The quotes can belong to the wrong product.** The most-helpful negative
+review filed under *Echo (White)* is actually about a refurbished Fire TV, and
+9 of the 40 negative reviews under *Streaming* talk about an Echo. The product
+and the review text do not always match in the source data. Because the quotes
+are ranked by helpfulness, one mismatched row with 292 votes can set the tone
+for a whole category - which is exactly what happens to **Smart speakers**.
+
+**distilbart is more extractive than it looks.** Asked to compress three
+complaints it often returns their sharpest sentences stitched together rather
+than genuinely new prose. That is honest output, but it is closer to selection
+than to writing.
+
+**Cases & covers has 23 reviews and no negatives at all**, so there is nothing
+to mine and nothing to generate. The tab says so instead of inventing a theme.
+
+**Complaint terms are words, not reasons.** *returned*, *waste*, *horrible*
+tell you a complaint happened, not what broke. Reading the quotes is still
+necessary.
+            """)
+
+    with st.expander("The one-paragraph version (what the dashboard consumes)"):
+        st.caption(
+            "`category_summaries.json` holds these as flat `{category: text}` "
+            "strings, the same shape Rayhan's dashboard already reads, so it "
+            "picks them up with no code change.")
+        st.code(build_flat(cat, s), language=None)
+
+# ================================================================= tab 4
+with TAB[3]:
     st.markdown(
         """
 ### Three models, same test set
