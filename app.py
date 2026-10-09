@@ -143,8 +143,32 @@ def load_embedder():
     return torch, tk, md
 
 
+def data_sig(*names):
+    """A cache key that changes when the data files do.
+
+    Streamlit Cloud hot-reloads app.py on a git push WITHOUT clearing
+    st.cache_data. A loader that takes no arguments therefore keeps serving
+    whatever it read before the deploy - which is how a tab that worked
+    locally came up with a KeyError live after the summaries JSON gained new
+    fields. Passing the files' size and mtime in means a changed file is a
+    different call.
+
+    NOTE: the parameter that receives this must NOT start with an
+    underscore - Streamlit treats a leading underscore as "exclude from the
+    cache key", which would silently restore the bug this exists to fix.
+    """
+    out = []
+    for n in names:
+        try:
+            st_ = (HERE / n).stat()
+            out.append("%s:%d:%d" % (n, st_.st_size, st_.st_mtime_ns))
+        except OSError:
+            out.append("%s:missing" % n)
+    return "|".join(out)
+
+
 @st.cache_data
-def load_clusters():
+def load_clusters(sig):
     import json
     cent = np.load(HERE / "cluster_centroids.npy")
     with open(HERE / "cluster_names.json", encoding="utf-8") as f:
@@ -154,7 +178,7 @@ def load_clusters():
 
 
 @st.cache_data
-def load_catstring_clusters():
+def load_catstring_clusters(sig):
     """The second model: clusters Amazon's own `categories` strings instead of
     product names. Neither ratings nor review counts are used as features."""
     import json
@@ -166,7 +190,7 @@ def load_catstring_clusters():
 
 
 @st.cache_data
-def load_members(using_cat):
+def load_members(using_cat, sig):
     """Embeddings of the real items the clustering was fitted on, in the same
     row order as products_categorised.csv / catstring_table.csv.
 
@@ -179,7 +203,7 @@ def load_members(using_cat):
 
 
 @st.cache_data
-def load_summaries():
+def load_summaries(sig):
     """Task 3 articles, precomputed by notebooks/task3_hybrid_summaries.ipynb.
 
     Structured rather than flat: the notebook writes one paragraph per
@@ -518,7 +542,9 @@ with TAB[1]:
     USING_CAT = which == BY_CAT
 
     if USING_CAT:
-        cent, cnames, tbl = load_catstring_clusters()
+        cent, cnames, tbl = load_catstring_clusters(
+            data_sig("catstring_centroids.npy", "catstring_names.json",
+                     "catstring_table.csv"))
         st.info(
             "**Clusters Amazon's own `categories` field rather than the product "
             "name.** Neither ratings nor review counts are used. It scores lower "
@@ -541,7 +567,9 @@ with TAB[1]:
             "The examples below are real strings taken from the data."
         )
     else:
-        cent, cnames, prods = load_clusters()
+        cent, cnames, prods = load_clusters(
+            data_sig("cluster_centroids.npy", "cluster_names.json",
+                     "products_categorised.csv"))
 
     PRODUCT_EXAMPLES = {
         "— choose an example —": "",
@@ -617,7 +645,8 @@ with TAB[1]:
             # Keyboard". Test 1 rejects it. The app prints whichever real item
             # was matched, so a borderline call is visible rather than hidden.
             CENT_FLOOR, NN_FLOOR = (0.45, 0.70) if USING_CAT else (0.36, 0.50)
-            memb = load_members(USING_CAT)
+            memb = load_members(USING_CAT, data_sig(
+                "catstring_embeddings.npy", "product_embeddings.npy"))
             nn = memb @ v
             j = int(np.argmax(nn))
             if USING_CAT:
@@ -745,7 +774,7 @@ with TAB[2]:
         "appears."
     )
 
-    SUMM = load_summaries()
+    SUMM = load_summaries(data_sig("category_summaries_structured.json"))
     order_by_size = sorted(SUMM, key=lambda c: -SUMM[c]["reviews"])
     cat = st.selectbox("Category", order_by_size, key="summary_cat")
     s = SUMM[cat]
